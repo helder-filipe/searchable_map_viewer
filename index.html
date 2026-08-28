@@ -31,7 +31,7 @@
       }
     }
 
-    /* Painel Lateral */
+    /* Painel Lateral de Pesquisa */
     #sidebar {
       width: 360px;
       background: #252526;
@@ -149,9 +149,14 @@
       will-change: transform;
     }
 
-    .map-wrapper img {
+    /* Estilização para renderização vetorial cristalina do SVG */
+    #svgContainer svg {
       display: block;
       pointer-events: none;
+      width: 100%;
+      height: 100%;
+      shape-rendering: geometricPrecision;
+      text-rendering: geometricPrecision;
     }
 
     /* Marcadores Extremamente Pequenos (5px) */
@@ -180,7 +185,7 @@
       z-index: 10;
     }
 
-    /* Etiqueta / Tooltip da Moradia com Botão Fechar */
+    /* Etiqueta / Tooltip com Botão Fechar */
     .pin-label {
       position: absolute;
       bottom: 10px;
@@ -235,13 +240,16 @@
 
   <div id="map-container">
     <div class="map-wrapper" id="mapWrapper">
-      <img src="MAPA Infralobo.svg" alt="Mapa Infralobo" id="mapImage">
+      <!-- O SVG é injetado diretamente aqui para garantir resolução perfeita -->
+      <div id="svgContainer"></div>
       <div id="pinsContainer"></div>
     </div>
   </div>
 
+  <!-- Carrega os dados de dados.js -->
+  <script src="dados.js"></script>
+
   <script>
-    let dadosMoradias = [];
     let moradiaSelecionada = null;
     let marcadoresVisiveis = true;
 
@@ -251,6 +259,7 @@
     const pinsContainer = document.getElementById('pinsContainer');
     const mapContainer = document.getElementById('map-container');
     const mapWrapper = document.getElementById('mapWrapper');
+    const svgContainer = document.getElementById('svgContainer');
     const btnToggleAll = document.getElementById('btnToggleAll');
     const totalCount = document.getElementById('totalCount');
 
@@ -262,19 +271,15 @@
     let startY = 0;
     let isDragging = false;
 
-    // 1. Carregar os dados do ficheiro JSON externo
-    async function carregarDadosJSON() {
+    // Injeta o SVG vetorial diretamente no DOM
+    async function carregarSVG() {
       try {
-        const resposta = await fetch('dados.json');
-        if (!resposta.ok) throw new Error('Erro ao carregar dados.json');
-        dadosMoradias = await resposta.json();
-        
-        totalCount.textContent = `${dadosMoradias.length} moradias`;
-        renderLista(dadosMoradias);
-        renderPins(dadosMoradias);
+        const resposta = await fetch('MAPA Infralobo.svg');
+        if (!resposta.ok) throw new Error('Não foi possível carregar o mapa SVG.');
+        const svgText = await resposta.text();
+        svgContainer.innerHTML = svgText;
       } catch (erro) {
-        console.error('Erro:', erro);
-        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b;">Erro ao carregar o ficheiro dados.json</li>';
+        console.error('Erro ao carregar o SVG:', erro);
       }
     }
 
@@ -286,11 +291,9 @@
       mapWrapper.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
     }
 
-    // Renderizar Marcadores no Mapa
     function renderPins(lista) {
       pinsContainer.innerHTML = '';
-
-      if (!marcadoresVisiveis) return; // Se estiverem ocultos, não desenha nada
+      if (!marcadoresVisiveis) return;
 
       lista.forEach((item) => {
         if (item.x !== null && item.y !== null) {
@@ -300,7 +303,6 @@
           if (moradiaSelecionada && moradiaSelecionada.moradia === item.moradia) {
             pin.classList.add('selected');
             
-            // Etiqueta com Nome + Botão Fechar (✕)
             const label = document.createElement('div');
             label.className = 'pin-label';
             label.innerHTML = `
@@ -308,7 +310,6 @@
               <span class="close-label" title="Fechar etiqueta">✕</span>
             `;
 
-            // Ação de fechar a etiqueta
             label.querySelector('.close-label').addEventListener('click', (e) => {
               e.stopPropagation();
               moradiaSelecionada = null;
@@ -332,7 +333,6 @@
       });
     }
 
-    // Renderizar Lista Lateral
     function renderLista(lista) {
       resultsList.innerHTML = '';
 
@@ -362,7 +362,6 @@
       });
     }
 
-    // Selecionar Moradia, focar e abrir etiqueta
     function selecionarMoradia(item) {
       moradiaSelecionada = item;
       renderPins(filtrarMoradias(searchInput.value));
@@ -377,28 +376,25 @@
       }
     }
 
-    // Filtrar Moradias na pesquisa
     function filtrarMoradias(termo) {
       const termoNorm = normalizarTexto(termo.trim());
       if (!termoNorm) return dadosMoradias;
       return dadosMoradias.filter(item => normalizarTexto(item.moradia).includes(termoNorm));
     }
 
-    // Eventos de Pesquisa
     searchInput.addEventListener('input', (e) => {
       const resultados = filtrarMoradias(e.target.value);
       renderLista(resultados);
       renderPins(resultados);
     });
 
-    // Alternar visibilidade de TODOS os marcadores
     btnToggleAll.addEventListener('click', () => {
       marcadoresVisiveis = !marcadoresVisiveis;
       btnToggleAll.textContent = marcadoresVisiveis ? 'Ocultar Marcadores' : 'Mostrar Marcadores';
       renderPins(filtrarMoradias(searchInput.value));
     });
 
-    // --- Controlo de Zoom Centrado no Rato ---
+    // Zoom centrado na posição do rato
     mapContainer.addEventListener('wheel', (e) => {
       e.preventDefault();
       const rect = mapContainer.getBoundingClientRect();
@@ -416,7 +412,7 @@
       atualizarTransformacao();
     }, { passive: false });
 
-    // --- Arrasto do Mapa (Pan) ---
+    // Arrasto com Rato
     mapContainer.addEventListener('mousedown', (e) => {
       isDragging = true;
       startX = e.clientX - pointX;
@@ -432,7 +428,7 @@
 
     window.addEventListener('mouseup', () => { isDragging = false; });
 
-    // Suporte para Tátil (Mobile)
+    // Arrasto Tátil (Telemóvel)
     mapContainer.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         isDragging = true;
@@ -451,8 +447,19 @@
 
     mapContainer.addEventListener('touchend', () => { isDragging = false; });
 
-    // Iniciar a aplicação
-    carregarDadosJSON();
+    // Inicialização da aplicação
+    async function inicializar() {
+      await carregarSVG();
+      if (typeof dadosMoradias !== 'undefined') {
+        totalCount.textContent = `${dadosMoradias.length} moradias`;
+        renderLista(dadosMoradias);
+        renderPins(dadosMoradias);
+      } else {
+        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b;">Ficheiro dados.js não encontrado.</li>';
+      }
+    }
+
+    inicializar();
   </script>
 </body>
 </html>
