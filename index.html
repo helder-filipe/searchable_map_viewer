@@ -307,8 +307,8 @@
 
     function centerMapOnPoint(x, y) {
       const viewportRect = viewport.getBoundingClientRect();
-      // Zoom aumentado para 12 (aproximação muito mais detalhada da moradia)
-      scale = 12;
+      // Zoom aumentado para 25 para aproximação ainda mais próxima
+      scale = 25;
 
       translateX = (viewportRect.width / 2) - (x * scale);
       translateY = (viewportRect.height / 2) - (y * scale);
