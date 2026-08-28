@@ -131,14 +131,14 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    /* Regras específicas para Telemóveis (ecrãs < 768px) */
+    /* Layout para Telemóveis */
     @media (max-width: 768px) {
-      sidebar { display: none; } /* Oculta a barra lateral */
-      .mobile-search-wrapper { display: block; } /* Ativa pesquisa sobreposta */
-      .header-title { display: none; } /* Poupa espaço no header */
+      sidebar { display: none; }
+      .mobile-search-wrapper { display: block; }
+      .header-title { display: none; }
     }
 
-    /* Animação do Marcador (25% do tamanho) */
+    /* Animação do Marcador */
     @keyframes pulsePinOnce {
       0% { r: 1.25px; stroke-width: 0.5px; }
       50% { r: 3px; stroke-width: 1px; }
@@ -173,7 +173,7 @@
     <span class="header-title">Localizador de Moradias</span>
     <button id="zoom-in" class="btn btn-zoom" title="Aumentar Zoom">+</button>
     <button id="zoom-out" class="btn btn-zoom" title="Diminuir Zoom">-</button>
-    <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Zoom">Reset</button>
+    <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Enquadramento">Reset</button>
     <span id="progress-status">A carregar dados...</span>
   </header>
 
@@ -185,7 +185,7 @@
       <div id="moradias-list-desktop" class="list-container"></div>
     </sidebar>
 
-    <!-- Mapa e Caixa de Pesquisa Flutuante para Telemóvel -->
+    <!-- Mapa e Pesquisa Flutuante para Telemóvel -->
     <div id="map-viewport">
       <div class="mobile-search-wrapper">
         <input type="text" id="search-box-mobile" class="search-input" placeholder="🔍 Pesquisar moradia..." autocomplete="off" />
@@ -204,11 +204,9 @@
     const viewport = document.getElementById('map-viewport');
     const progressStatus = document.getElementById('progress-status');
 
-    // Elementos Desktop
     const searchBoxDesktop = document.getElementById('search-box-desktop');
     const listDesktop = document.getElementById('moradias-list-desktop');
 
-    // Elementos Mobile
     const searchBoxMobile = document.getElementById('search-box-mobile');
     const listMobile = document.getElementById('moradias-list-mobile');
 
@@ -225,6 +223,8 @@
     let listData = [];
     let selectedIndex = -1;
     let svgLayerGroup = null;
+    let svgWidth = 1000;
+    let svgHeight = 1000;
 
     async function init() {
       try {
@@ -248,6 +248,12 @@
           svgLayerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           svgLayerGroup.setAttribute('id', 'dynamic-pins-layer');
           svgEl.appendChild(svgLayerGroup);
+
+          // Obtém as dimensões originais do SVG
+          const bbox = svgEl.getBBox();
+          const viewBox = svgEl.viewBox ? svgEl.viewBox.baseVal : null;
+          svgWidth = (viewBox && viewBox.width) ? viewBox.width : (bbox.width || svgEl.clientWidth || 1000);
+          svgHeight = (viewBox && viewBox.height) ? viewBox.height : (bbox.height || svgEl.clientHeight || 1000);
         }
 
         setupPanAndZoom();
@@ -255,11 +261,32 @@
         renderListDesktop();
         renderPins();
 
+        // Faz o fit do mapa completo para ficar visível logo no arranque
+        fitMapToViewport();
+
         progressStatus.innerText = `${listData.length} moradias carregadas.`;
       } catch (err) {
         console.error(err);
         progressStatus.innerText = `Erro: ${err.message}`;
       }
+    }
+
+    // Ajusta a escala e centragem para que o mapa fique 100% visível na janela
+    function fitMapToViewport() {
+      const vRect = viewport.getBoundingClientRect();
+      if (!vRect.width || !vRect.height) return;
+
+      const scaleX = vRect.width / svgWidth;
+      const scaleY = vRect.height / svgHeight;
+      
+      // Escolhe a menor escala com uma pequena margem (95%) para caber inteiro sem colar às bordas
+      scale = Math.min(scaleX, scaleY) * 0.95;
+
+      // Centra a imagem
+      translateX = (vRect.width - (svgWidth * scale)) / 2;
+      translateY = (vRect.height - (svgHeight * scale)) / 2;
+
+      updateTransform();
     }
 
     function updateTransform() {
@@ -271,7 +298,7 @@
       const pivotX = clientX !== undefined ? (clientX - viewportRect.left) : (viewportRect.width / 2);
       const pivotY = clientY !== undefined ? (clientY - viewportRect.top) : (viewportRect.height / 2);
 
-      const newScale = Math.min(Math.max(0.2, scale * factor), 15);
+      const newScale = Math.min(Math.max(0.05, scale * factor), 15);
       
       translateX = pivotX - (pivotX - translateX) * (newScale / scale);
       translateY = pivotY - (pivotY - translateY) * (newScale / scale);
@@ -300,7 +327,7 @@
     function setupPanAndZoom() {
       zoomInBtn.addEventListener('click', () => zoomAtPoint(1.3));
       zoomOutBtn.addEventListener('click', () => zoomAtPoint(1 / 1.3));
-      zoomResetBtn.addEventListener('click', () => { scale = 1; translateX = 0; translateY = 0; updateTransform(); });
+      zoomResetBtn.addEventListener('click', () => fitMapToViewport());
 
       viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -308,7 +335,6 @@
         zoomAtPoint(factor, e.clientX, e.clientY);
       }, { passive: false });
 
-      // Suporte para Arrastar (Touch e Rato)
       const startDrag = (x, y) => {
         isDragging = true;
         startX = x - translateX;
@@ -335,13 +361,15 @@
         if (e.touches.length === 1) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
       });
       window.addEventListener('touchend', stopDrag);
+
+      window.addEventListener('resize', () => {
+        if (selectedIndex === -1) fitMapToViewport();
+      });
     }
 
     function setupSearchListeners() {
-      // Eventos Desktop
       searchBoxDesktop.addEventListener('input', () => renderListDesktop());
 
-      // Eventos Mobile
       searchBoxMobile.addEventListener('input', () => {
         const query = searchBoxMobile.value.toLowerCase().trim();
         if (!query) {
@@ -351,7 +379,6 @@
         renderListMobile(query);
       });
 
-      // Ocultar dropdown mobile ao clicar fora
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.mobile-search-wrapper')) {
           listMobile.style.display = 'none';
@@ -442,6 +469,7 @@
       searchBoxMobile.value = '';
       renderListDesktop();
       renderPins();
+      fitMapToViewport();
     }
 
     function renderPins() {
