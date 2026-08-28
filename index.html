@@ -149,7 +149,7 @@
       will-change: transform;
     }
 
-    /* Estilização para renderização vetorial cristalina do SVG */
+    /* Renderização nitida do SVG */
     #svgContainer svg {
       display: block;
       pointer-events: none;
@@ -240,16 +240,13 @@
 
   <div id="map-container">
     <div class="map-wrapper" id="mapWrapper">
-      <!-- O SVG é injetado diretamente aqui para garantir resolução perfeita -->
       <div id="svgContainer"></div>
       <div id="pinsContainer"></div>
     </div>
   </div>
 
-  <!-- Carrega os dados de dados.json -->
-  <script src="dados.json"></script>
-
   <script>
+    let dadosMoradias = [];
     let moradiaSelecionada = null;
     let marcadoresVisiveis = true;
 
@@ -271,7 +268,22 @@
     let startY = 0;
     let isDragging = false;
 
-    // Injeta o SVG vetorial diretamente no DOM
+    // Carregar o ficheiro dados.json via HTTP (Vercel/Servidor)
+    async function carregarDadosJSON() {
+      try {
+        const resposta = await fetch('dados.json');
+        if (!resposta.ok) throw new Error('Não foi possível carregar o ficheiro dados.json.');
+        dadosMoradias = await resposta.json();
+        totalCount.textContent = `${dadosMoradias.length} moradias`;
+        renderLista(dadosMoradias);
+        renderPins(dadosMoradias);
+      } catch (erro) {
+        console.error('Erro:', erro);
+        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b; padding: 12px;">Ficheiro dados.json não encontrado ou inválido.</li>';
+      }
+    }
+
+    // Injetar SVG inline para nitidez máxima
     async function carregarSVG() {
       try {
         const resposta = await fetch('MAPA Infralobo.svg');
@@ -337,7 +349,7 @@
       resultsList.innerHTML = '';
 
       if (lista.length === 0) {
-        resultsList.innerHTML = '<li class="result-item" style="color: #888;">Nenhuma moradia encontrada</li>';
+        resultsList.innerHTML = '<li class="result-item" style="color: #888; padding: 12px;">Nenhuma moradia encontrada</li>';
         return;
       }
 
@@ -447,16 +459,10 @@
 
     mapContainer.addEventListener('touchend', () => { isDragging = false; });
 
-    // Inicialização da aplicação
+    // Arranque
     async function inicializar() {
       await carregarSVG();
-      if (typeof dadosMoradias !== 'undefined') {
-        totalCount.textContent = `${dadosMoradias.length} moradias`;
-        renderLista(dadosMoradias);
-        renderPins(dadosMoradias);
-      } else {
-        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b;">Ficheiro dados.json não encontrado.</li>';
-      }
+      await carregarDadosJSON();
     }
 
     inicializar();
