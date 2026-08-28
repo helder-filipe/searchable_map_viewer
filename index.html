@@ -129,7 +129,7 @@
       image-rendering: crisp-edges;
     }
 
-    /* Estilos vectoriais dos Marcadores e Etiquetas no SVG */
+    /* Estilos vectoriais dos Marcadores Padrão */
     .pin-group { cursor: pointer; }
     
     .pin-circle {
@@ -141,13 +141,6 @@
 
     .pin-group:hover .pin-circle {
       fill: #00ffff;
-      r: 6px;
-    }
-
-    .pin-group.selected .pin-circle {
-      fill: #00bfff;
-      stroke: #ffffff;
-      stroke-width: 2px;
       r: 6px;
     }
 
@@ -166,14 +159,37 @@
       pointer-events: none;
     }
 
-    .pin-group.selected .pin-label-text {
-      fill: #00bfff;
-      font-weight: bold;
+    /* Estilos do Marcador em Destaque (Pesquisado) - Animação Sempre Visível */
+    @keyframes pulsePin {
+      0% { r: 6px; stroke-width: 2px; }
+      50% { r: 10px; stroke-width: 4px; }
+      100% { r: 6px; stroke-width: 2px; }
     }
 
-    /* Classes para Ocultar Marcadores ou Etiquetas */
-    .hidden-pins .pin-circle { display: none !important; }
-    .hidden-labels .pin-label-group { display: none !important; }
+    .search-pin-circle {
+      fill: #ff0055;
+      stroke: #ffffff;
+      animation: pulsePin 1.2s infinite ease-in-out;
+    }
+
+    .search-label-bg {
+      fill: #ff0055;
+      rx: 3px;
+      ry: 3px;
+    }
+
+    .search-label-text {
+      fill: #ffffff;
+      font-size: 11px;
+      font-family: system-ui, sans-serif;
+      font-weight: bold;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Apenas oculta os marcadores padrão (.pin-group), mantendo o destaque de pesquisa visível */
+    .hidden-pins .pin-group .pin-circle { display: none !important; }
+    .hidden-labels .pin-group .pin-label-group { display: none !important; }
   </style>
 </head>
 <body>
@@ -239,7 +255,6 @@
       try {
         progressStatus.innerText = 'A carregar ficheiros...';
 
-        // Carregamento paralelo do SVG e do JSON
         const [svgRes, jsonRes] = await Promise.all([
           fetch('MAPA Infralobo.svg'),
           fetch('dados.json')
@@ -251,7 +266,6 @@
         const svgText = await svgRes.text();
         listData = await jsonRes.json();
 
-        // Renderiza o SVG no DOM
         svgHolder.innerHTML = svgText;
         const svgEl = svgHolder.querySelector('svg');
 
@@ -408,10 +422,11 @@
       if (!svgLayerGroup) return;
       svgLayerGroup.innerHTML = '';
 
+      // 1. Renderiza os marcadores verdes normais (sujeitos às regras de ocultar)
       listData.forEach((item, index) => {
         if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          g.setAttribute('class', `pin-group ${index === selectedIndex ? 'selected' : ''}`);
+          g.setAttribute('class', 'pin-group');
 
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', item.x);
@@ -454,6 +469,46 @@
           bg.setAttribute('height', textBounds.height + 2);
         }
       });
+
+      // 2. Renderiza a moradia selecionada numa camada superior em DESTAQUE (Sempre visível)
+      if (selectedIndex >= 0 && selectedIndex < listData.length) {
+        const item = listData[selectedIndex];
+        if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
+          const highlightGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          highlightGroup.setAttribute('class', 'search-highlight-group');
+
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', item.x);
+          circle.setAttribute('cy', item.y);
+          circle.setAttribute('r', '8');
+          circle.setAttribute('class', 'search-pin-circle');
+
+          const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', item.x + 12);
+          text.setAttribute('y', item.y + 4);
+          text.setAttribute('class', 'search-label-text');
+          text.textContent = item.moradia || item.id;
+
+          const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          bg.setAttribute('class', 'search-label-bg');
+
+          labelGroup.appendChild(bg);
+          labelGroup.appendChild(text);
+
+          highlightGroup.appendChild(circle);
+          highlightGroup.appendChild(labelGroup);
+
+          svgLayerGroup.appendChild(highlightGroup);
+
+          const textBounds = text.getBBox();
+          bg.setAttribute('x', textBounds.x - 3);
+          bg.setAttribute('y', textBounds.y - 2);
+          bg.setAttribute('width', textBounds.width + 6);
+          bg.setAttribute('height', textBounds.height + 4);
+        }
+      }
     }
 
     init();
