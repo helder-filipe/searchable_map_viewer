@@ -2,35 +2,41 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Localizador de Moradias - Infralobo</title>
 
   <style>
     * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #1e1e1e; color: white; display: flex; flex-direction: column; height: 100vh; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #1e1e1e; color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
     header {
       background: #004b87;
-      padding: 10px 20px;
+      padding: 10px 16px;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.4);
       z-index: 100;
+      flex-shrink: 0;
     }
 
-    .btn { padding: 8px 14px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .btn-zoom { background: #6c757d; width: 36px; text-align: center; }
+    .header-title { font-weight: bold; font-size: 15px; white-space: nowrap; }
+    .btn { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-zoom { background: #6c757d; min-width: 32px; text-align: center; }
+    #progress-status { font-size: 12px; opacity: 0.8; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .main-layout { display: flex; flex-grow: 1; overflow: hidden; }
+    .main-layout { display: flex; flex-grow: 1; position: relative; overflow: hidden; }
 
+    /* Estilos Desktop da Sidebar */
     sidebar {
-      width: 340px;
+      width: 320px;
       background: #111;
       border-right: 1px solid #333;
       display: flex;
       flex-direction: column;
       padding: 15px;
       gap: 10px;
+      z-index: 10;
     }
 
     .search-input {
@@ -65,18 +71,9 @@
     }
 
     .moradia-item:hover { background: #1d2733; }
-    
-    .moradia-item.active {
-      background: #004b87;
-      color: white;
-      font-weight: bold;
-    }
+    .moradia-item.active { background: #004b87; color: white; font-weight: bold; }
 
-    .item-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    .item-right { display: flex; align-items: center; gap: 6px; }
 
     .gmaps-link {
       color: #ea4335;
@@ -85,12 +82,6 @@
       padding: 2px 5px;
       border: 1px solid #ea4335;
       border-radius: 3px;
-      transition: all 0.2s ease;
-    }
-
-    .gmaps-link:hover {
-      background: #ea4335;
-      color: #fff;
     }
 
     #map-viewport { 
@@ -99,6 +90,8 @@
       position: relative; 
       background: #2b2b2b; 
       cursor: grab;
+      width: 100%;
+      height: 100%;
     }
     
     #map-viewport:active { cursor: grabbing; }
@@ -118,7 +111,34 @@
       image-rendering: crisp-edges;
     }
 
-    /* Animação executada APENAS 1 vez no marcador (Valores reduzidos a 25%) */
+    /* Caixa de Pesquisa Flutuante para Telemóveis */
+    .mobile-search-wrapper {
+      display: none;
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 50;
+    }
+
+    .mobile-dropdown {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #111;
+      border: 1px solid #444;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    /* Regras específicas para Telemóveis (ecrãs < 768px) */
+    @media (max-width: 768px) {
+      sidebar { display: none; } /* Oculta a barra lateral */
+      .mobile-search-wrapper { display: block; } /* Ativa pesquisa sobreposta */
+      .header-title { display: none; } /* Poupa espaço no header */
+    }
+
+    /* Animação do Marcador (25% do tamanho) */
     @keyframes pulsePinOnce {
       0% { r: 1.25px; stroke-width: 0.5px; }
       50% { r: 3px; stroke-width: 1px; }
@@ -131,11 +151,7 @@
       animation: pulsePinOnce 1s ease-out 1 forwards;
     }
 
-    .search-label-bg {
-      fill: #ff0055;
-      rx: 1px;
-      ry: 1px;
-    }
+    .search-label-bg { fill: #ff0055; rx: 1px; ry: 1px; }
 
     .search-label-text {
       fill: #ffffff;
@@ -146,49 +162,36 @@
       pointer-events: none;
     }
 
-    /* Botão X para fechar a etiqueta (Tamanho reduzido a 25%) */
-    .close-btn-bg {
-      fill: #000000;
-      opacity: 0.3;
-      cursor: pointer;
-      rx: 0.5px;
-      ry: 0.5px;
-    }
-
-    .close-btn-bg:hover {
-      fill: #ffffff;
-      opacity: 0.4;
-    }
-
-    .close-btn-text {
-      fill: #ffffff;
-      font-size: 2.5px;
-      font-family: system-ui, sans-serif;
-      font-weight: bold;
-      cursor: pointer;
-      user-select: none;
-    }
+    .close-btn-bg { fill: #000000; opacity: 0.3; cursor: pointer; rx: 0.5px; ry: 0.5px; }
+    .close-btn-bg:hover { fill: #ffffff; opacity: 0.4; }
+    .close-btn-text { fill: #ffffff; font-size: 2.5px; font-family: system-ui, sans-serif; font-weight: bold; cursor: pointer; user-select: none; }
   </style>
 </head>
 <body>
 
   <header>
-    <span><strong>Localizador de Moradias</strong></span>
+    <span class="header-title">Localizador de Moradias</span>
     <button id="zoom-in" class="btn btn-zoom" title="Aumentar Zoom">+</button>
     <button id="zoom-out" class="btn btn-zoom" title="Diminuir Zoom">-</button>
     <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Zoom">Reset</button>
-
     <span id="progress-status">A carregar dados...</span>
   </header>
 
   <div class="main-layout">
+    <!-- Sidebar para Computador -->
     <sidebar>
       <h3>Pesquisa</h3>
-      <input type="text" id="search-box" class="search-input" placeholder="Pesquisar moradia (ex: VDL 8 A)..." autofocus />
-      <div id="moradias-list" class="list-container"></div>
+      <input type="text" id="search-box-desktop" class="search-input" placeholder="Pesquisar moradia (ex: VDL 8 A)..." />
+      <div id="moradias-list-desktop" class="list-container"></div>
     </sidebar>
 
+    <!-- Mapa e Caixa de Pesquisa Flutuante para Telemóvel -->
     <div id="map-viewport">
+      <div class="mobile-search-wrapper">
+        <input type="text" id="search-box-mobile" class="search-input" placeholder="🔍 Pesquisar moradia..." autocomplete="off" />
+        <div id="moradias-list-mobile" class="mobile-dropdown" style="display: none;"></div>
+      </div>
+
       <div id="svg-wrapper">
         <div id="svg-holder"></div>
       </div>
@@ -196,12 +199,18 @@
   </div>
 
   <script>
-    const listContainer = document.getElementById('moradias-list');
     const svgHolder = document.getElementById('svg-holder');
     const wrapper = document.getElementById('svg-wrapper');
     const viewport = document.getElementById('map-viewport');
     const progressStatus = document.getElementById('progress-status');
-    const searchBox = document.getElementById('search-box');
+
+    // Elementos Desktop
+    const searchBoxDesktop = document.getElementById('search-box-desktop');
+    const listDesktop = document.getElementById('moradias-list-desktop');
+
+    // Elementos Mobile
+    const searchBoxMobile = document.getElementById('search-box-mobile');
+    const listMobile = document.getElementById('moradias-list-mobile');
 
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
@@ -242,8 +251,8 @@
         }
 
         setupPanAndZoom();
-        setupSearch();
-        renderList();
+        setupSearchListeners();
+        renderListDesktop();
         renderPins();
 
         progressStatus.innerText = `${listData.length} moradias carregadas.`;
@@ -299,43 +308,83 @@
         zoomAtPoint(factor, e.clientX, e.clientY);
       }, { passive: false });
 
-      viewport.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
+      // Suporte para Arrastar (Touch e Rato)
+      const startDrag = (x, y) => {
         isDragging = true;
-        startX = e.clientX - translateX;
-        startY = e.clientY - translateY;
-      });
+        startX = x - translateX;
+        startY = y - translateY;
+      };
 
-      window.addEventListener('mousemove', (e) => {
+      const moveDrag = (x, y) => {
         if (!isDragging) return;
-        translateX = e.clientX - startX;
-        translateY = e.clientY - startY;
+        translateX = x - startX;
+        translateY = y - startY;
         updateTransform();
-      });
+      };
 
-      window.addEventListener('mouseup', () => { isDragging = false; });
+      const stopDrag = () => { isDragging = false; };
+
+      viewport.addEventListener('mousedown', (e) => { if (e.button === 0) startDrag(e.clientX, e.clientY); });
+      window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+      window.addEventListener('mouseup', stopDrag);
+
+      viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      });
+      window.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+      });
+      window.addEventListener('touchend', stopDrag);
     }
 
-    function setupSearch() {
-      searchBox.addEventListener('input', () => {
-        renderList();
+    function setupSearchListeners() {
+      // Eventos Desktop
+      searchBoxDesktop.addEventListener('input', () => renderListDesktop());
+
+      // Eventos Mobile
+      searchBoxMobile.addEventListener('input', () => {
+        const query = searchBoxMobile.value.toLowerCase().trim();
+        if (!query) {
+          listMobile.style.display = 'none';
+          return;
+        }
+        renderListMobile(query);
+      });
+
+      // Ocultar dropdown mobile ao clicar fora
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.mobile-search-wrapper')) {
+          listMobile.style.display = 'none';
+        }
       });
     }
 
-    function renderList() {
-      listContainer.innerHTML = '';
-      const filterQuery = searchBox.value.toLowerCase().trim();
+    function selectMoradia(index, nome) {
+      selectedIndex = index;
+      const item = listData[index];
+
+      searchBoxDesktop.value = nome;
+      searchBoxMobile.value = nome;
+      listMobile.style.display = 'none';
+
+      renderListDesktop();
+      renderPins();
+
+      if (item && item.x !== undefined && item.y !== undefined) {
+        centerMapOnPoint(item.x, item.y);
+      }
+    }
+
+    function renderListDesktop() {
+      listDesktop.innerHTML = '';
+      const filterQuery = searchBoxDesktop.value.toLowerCase().trim();
 
       listData.forEach((item, index) => {
         const moradiaNome = item.moradia || item.id;
-        
-        if (filterQuery && !moradiaNome.toLowerCase().includes(filterQuery)) {
-          return;
-        }
+        if (filterQuery && !moradiaNome.toLowerCase().includes(filterQuery)) return;
 
         const div = document.createElement('div');
         div.className = `moradia-item ${index === selectedIndex ? 'active' : ''}`;
-        
         div.innerHTML = `
           <span>${moradiaNome}</span>
           <div class="item-right">
@@ -343,34 +392,55 @@
           </div>
         `;
 
-        const gmapsLink = div.querySelector('.gmaps-link');
-        gmapsLink.addEventListener('click', (e) => {
+        div.querySelector('.gmaps-link').addEventListener('click', (e) => {
           e.stopPropagation();
           openGoogleMaps(item.lat, item.lng);
         });
 
-        div.addEventListener('click', () => {
-          selectedIndex = index;
-          renderList();
-          renderPins();
+        div.addEventListener('click', () => selectMoradia(index, moradiaNome));
+        listDesktop.appendChild(div);
+      });
+    }
 
-          if (item.x !== undefined && item.y !== undefined) {
-            centerMapOnPoint(item.x, item.y);
-          }
+    function renderListMobile(query) {
+      listMobile.innerHTML = '';
+      const matches = listData.filter(item => (item.moradia || item.id).toLowerCase().includes(query));
+
+      if (matches.length === 0) {
+        listMobile.style.display = 'none';
+        return;
+      }
+
+      matches.forEach((item) => {
+        const index = listData.indexOf(item);
+        const moradiaNome = item.moradia || item.id;
+
+        const div = document.createElement('div');
+        div.className = 'moradia-item';
+        div.innerHTML = `
+          <span>${moradiaNome}</span>
+          <div class="item-right">
+            <a href="#" class="gmaps-link">📍</a>
+          </div>
+        `;
+
+        div.querySelector('.gmaps-link').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openGoogleMaps(item.lat, item.lng);
         });
 
-        listContainer.appendChild(div);
+        div.addEventListener('click', () => selectMoradia(index, moradiaNome));
+        listMobile.appendChild(div);
       });
 
-      const activeEl = listContainer.querySelector('.moradia-item.active');
-      if (activeEl) {
-        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      listMobile.style.display = 'block';
     }
 
     function deselectMoradia() {
       selectedIndex = -1;
-      renderList();
+      searchBoxDesktop.value = '';
+      searchBoxMobile.value = '';
+      renderListDesktop();
       renderPins();
     }
 
@@ -378,14 +448,12 @@
       if (!svgLayerGroup) return;
       svgLayerGroup.innerHTML = '';
 
-      // Renderiza EXCLUSIVAMENTE a moradia pesquisada com elementos a 25% da dimensão original
       if (selectedIndex >= 0 && selectedIndex < listData.length) {
         const item = listData[selectedIndex];
         if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
           const highlightGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           highlightGroup.setAttribute('class', 'search-highlight-group');
 
-          // Raio reduzido de 7px para 1.75px
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', item.x);
           circle.setAttribute('cy', item.y);
@@ -394,7 +462,6 @@
 
           const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
-          // Deslocamentos (offsets) e tamanho de fonte reduzidos para 25%
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           text.setAttribute('x', item.x + 3);
           text.setAttribute('y', item.y + 1);
@@ -404,7 +471,6 @@
           const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           bg.setAttribute('class', 'search-label-bg');
 
-          // Botão X reduzido
           const closeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           closeBg.setAttribute('class', 'close-btn-bg');
 
@@ -430,9 +496,8 @@
 
           svgLayerGroup.appendChild(highlightGroup);
 
-          // Ajustes proporcionais de margem e caixa para fechar
           const textBounds = text.getBBox();
-          const closeWidth = 3.5; // (14px * 0.25)
+          const closeWidth = 3.5;
           const paddingRight = closeWidth + 1.5;
 
           bg.setAttribute('x', textBounds.x - 0.75);
