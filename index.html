@@ -159,17 +159,17 @@
       pointer-events: none;
     }
 
-    /* Estilos do Marcador em Destaque (Pesquisado) - Animação Sempre Visível */
-    @keyframes pulsePin {
-      0% { r: 6px; stroke-width: 2px; }
-      50% { r: 10px; stroke-width: 4px; }
-      100% { r: 6px; stroke-width: 2px; }
+    /* Animação executada APENAS 1 vez (1s forwards) */
+    @keyframes pulsePinOnce {
+      0% { r: 5px; stroke-width: 2px; }
+      50% { r: 12px; stroke-width: 4px; }
+      100% { r: 7px; stroke-width: 2px; }
     }
 
     .search-pin-circle {
       fill: #ff0055;
       stroke: #ffffff;
-      animation: pulsePin 1.2s infinite ease-in-out;
+      animation: pulsePinOnce 1s ease-out 1 forwards;
     }
 
     .search-label-bg {
@@ -187,7 +187,30 @@
       pointer-events: none;
     }
 
-    /* Apenas oculta os marcadores padrão (.pin-group), mantendo o destaque de pesquisa visível */
+    /* Botão X para fechar a etiqueta */
+    .close-btn-bg {
+      fill: #000000;
+      opacity: 0.3;
+      cursor: pointer;
+      rx: 2px;
+      ry: 2px;
+    }
+
+    .close-btn-bg:hover {
+      fill: #ffffff;
+      opacity: 0.4;
+    }
+
+    .close-btn-text {
+      fill: #ffffff;
+      font-size: 10px;
+      font-family: system-ui, sans-serif;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Ocultar marcadores/etiquetas normais */
     .hidden-pins .pin-group .pin-circle { display: none !important; }
     .hidden-labels .pin-group .pin-label-group { display: none !important; }
   </style>
@@ -418,11 +441,17 @@
       }
     }
 
+    function deselectMoradia() {
+      selectedIndex = -1;
+      renderList();
+      renderPins();
+    }
+
     function renderPins() {
       if (!svgLayerGroup) return;
       svgLayerGroup.innerHTML = '';
 
-      // 1. Renderiza os marcadores verdes normais (sujeitos às regras de ocultar)
+      // 1. Marcadores verdes normais
       listData.forEach((item, index) => {
         if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -470,7 +499,7 @@
         }
       });
 
-      // 2. Renderiza a moradia selecionada numa camada superior em DESTAQUE (Sempre visível)
+      // 2. Marcador em Destaque (Pesquisado) com Animação Única e Botão Fechar (X)
       if (selectedIndex >= 0 && selectedIndex < listData.length) {
         const item = listData[selectedIndex];
         if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
@@ -480,7 +509,7 @@
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', item.x);
           circle.setAttribute('cy', item.y);
-          circle.setAttribute('r', '8');
+          circle.setAttribute('r', '7');
           circle.setAttribute('class', 'search-pin-circle');
 
           const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -494,19 +523,53 @@
           const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           bg.setAttribute('class', 'search-label-bg');
 
+          // Elementos do Botão X
+          const closeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          closeBg.setAttribute('class', 'close-btn-bg');
+
+          const closeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          closeText.setAttribute('class', 'close-btn-text');
+          closeText.textContent = '✕';
+
+          // Evento ao clicar no X para fechar o marcador/etiqueta
+          const closeHandler = (e) => {
+            e.stopPropagation();
+            deselectMoradia();
+          };
+
+          closeBg.addEventListener('click', closeHandler);
+          closeText.addEventListener('click', closeHandler);
+
           labelGroup.appendChild(bg);
           labelGroup.appendChild(text);
+          labelGroup.appendChild(closeBg);
+          labelGroup.appendChild(closeText);
 
           highlightGroup.appendChild(circle);
           highlightGroup.appendChild(labelGroup);
 
           svgLayerGroup.appendChild(highlightGroup);
 
+          // Cálculo dos tamanhos e posições do fundo e do botão X
           const textBounds = text.getBBox();
+          const closeWidth = 14;
+          const paddingRight = closeWidth + 6;
+
           bg.setAttribute('x', textBounds.x - 3);
           bg.setAttribute('y', textBounds.y - 2);
-          bg.setAttribute('width', textBounds.width + 6);
+          bg.setAttribute('width', textBounds.width + paddingRight);
           bg.setAttribute('height', textBounds.height + 4);
+
+          const closeX = textBounds.x + textBounds.width + 3;
+          const closeY = textBounds.y - 1;
+
+          closeBg.setAttribute('x', closeX);
+          closeBg.setAttribute('y', closeY);
+          closeBg.setAttribute('width', 12);
+          closeBg.setAttribute('height', 12);
+
+          closeText.setAttribute('x', closeX + 2);
+          closeText.setAttribute('y', closeY + 9.5);
         }
       }
     }
