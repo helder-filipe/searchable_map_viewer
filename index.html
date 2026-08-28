@@ -118,11 +118,11 @@
       image-rendering: crisp-edges;
     }
 
-    /* Animação executada APENAS 1 vez no marcador da moradia pesquisada */
+    /* Animação executada APENAS 1 vez no marcador (Valores reduzidos a 25%) */
     @keyframes pulsePinOnce {
-      0% { r: 5px; stroke-width: 2px; }
-      50% { r: 12px; stroke-width: 4px; }
-      100% { r: 7px; stroke-width: 2px; }
+      0% { r: 1.25px; stroke-width: 0.5px; }
+      50% { r: 3px; stroke-width: 1px; }
+      100% { r: 1.75px; stroke-width: 0.5px; }
     }
 
     .search-pin-circle {
@@ -133,26 +133,26 @@
 
     .search-label-bg {
       fill: #ff0055;
-      rx: 3px;
-      ry: 3px;
+      rx: 1px;
+      ry: 1px;
     }
 
     .search-label-text {
       fill: #ffffff;
-      font-size: 11px;
+      font-size: 2.75px;
       font-family: system-ui, sans-serif;
       font-weight: bold;
       user-select: none;
       pointer-events: none;
     }
 
-    /* Botão X para fechar a etiqueta */
+    /* Botão X para fechar a etiqueta (Tamanho reduzido a 25%) */
     .close-btn-bg {
       fill: #000000;
       opacity: 0.3;
       cursor: pointer;
-      rx: 2px;
-      ry: 2px;
+      rx: 0.5px;
+      ry: 0.5px;
     }
 
     .close-btn-bg:hover {
@@ -162,7 +162,7 @@
 
     .close-btn-text {
       fill: #ffffff;
-      font-size: 10px;
+      font-size: 2.5px;
       font-family: system-ui, sans-serif;
       font-weight: bold;
       cursor: pointer;
@@ -378,31 +378,33 @@
       if (!svgLayerGroup) return;
       svgLayerGroup.innerHTML = '';
 
-      // Desenha EXCLUSIVAMENTE a moradia selecionada na pesquisa
+      // Renderiza EXCLUSIVAMENTE a moradia pesquisada com elementos a 25% da dimensão original
       if (selectedIndex >= 0 && selectedIndex < listData.length) {
         const item = listData[selectedIndex];
         if (item.x !== undefined && item.y !== undefined && item.x !== null && item.y !== null) {
           const highlightGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           highlightGroup.setAttribute('class', 'search-highlight-group');
 
+          // Raio reduzido de 7px para 1.75px
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', item.x);
           circle.setAttribute('cy', item.y);
-          circle.setAttribute('r', '7');
+          circle.setAttribute('r', '1.75');
           circle.setAttribute('class', 'search-pin-circle');
 
           const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
+          // Deslocamentos (offsets) e tamanho de fonte reduzidos para 25%
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', item.x + 12);
-          text.setAttribute('y', item.y + 4);
+          text.setAttribute('x', item.x + 3);
+          text.setAttribute('y', item.y + 1);
           text.setAttribute('class', 'search-label-text');
           text.textContent = item.moradia || item.id;
 
           const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           bg.setAttribute('class', 'search-label-bg');
 
-          // Botão X
+          // Botão X reduzido
           const closeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           closeBg.setAttribute('class', 'close-btn-bg');
 
@@ -428,26 +430,26 @@
 
           svgLayerGroup.appendChild(highlightGroup);
 
-          // Ajustes de dimensão do fundo e posição do X
+          // Ajustes proporcionais de margem e caixa para fechar
           const textBounds = text.getBBox();
-          const closeWidth = 14;
-          const paddingRight = closeWidth + 6;
+          const closeWidth = 3.5; // (14px * 0.25)
+          const paddingRight = closeWidth + 1.5;
 
-          bg.setAttribute('x', textBounds.x - 3);
-          bg.setAttribute('y', textBounds.y - 2);
+          bg.setAttribute('x', textBounds.x - 0.75);
+          bg.setAttribute('y', textBounds.y - 0.5);
           bg.setAttribute('width', textBounds.width + paddingRight);
-          bg.setAttribute('height', textBounds.height + 4);
+          bg.setAttribute('height', textBounds.height + 1);
 
-          const closeX = textBounds.x + textBounds.width + 3;
-          const closeY = textBounds.y - 1;
+          const closeX = textBounds.x + textBounds.width + 0.75;
+          const closeY = textBounds.y - 0.25;
 
           closeBg.setAttribute('x', closeX);
           closeBg.setAttribute('y', closeY);
-          closeBg.setAttribute('width', 12);
-          closeBg.setAttribute('height', 12);
+          closeBg.setAttribute('width', 3);
+          closeBg.setAttribute('height', 3);
 
-          closeText.setAttribute('x', closeX + 2);
-          closeText.setAttribute('y', closeY + 9.5);
+          closeText.setAttribute('x', closeX + 0.5);
+          closeText.setAttribute('y', closeY + 2.4);
         }
       }
     }
