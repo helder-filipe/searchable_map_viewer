@@ -246,8 +246,8 @@
     </div>
   </div>
 
-  <!-- Carrega os dados de dados.js -->
-  <script src="dados.js"></script>
+  <!-- Carrega os dados de dados.json -->
+  <script src="dados.json"></script>
 
   <script>
     let moradiaSelecionada = null;
@@ -455,7 +455,7 @@
         renderLista(dadosMoradias);
         renderPins(dadosMoradias);
       } else {
-        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b;">Ficheiro dados.js não encontrado.</li>';
+        resultsList.innerHTML = '<li class="result-item" style="color: #ff6b6b;">Ficheiro dados.json não encontrado.</li>';
       }
     }
 
