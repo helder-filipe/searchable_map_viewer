@@ -2,7 +2,8 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
+  <!-- Impede o navegador mobile de fazer auto-zoom nos inputs -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Localizador de Moradias - Infralobo</title>
 
   <style>
@@ -11,19 +12,26 @@
 
     header {
       background: #004b87;
-      padding: 10px 16px;
+      padding: 8px 12px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.4);
       z-index: 100;
       flex-shrink: 0;
     }
 
-    .header-title { font-weight: bold; font-size: 15px; white-space: nowrap; }
-    .btn { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .btn-zoom { background: #6c757d; min-width: 32px; text-align: center; }
-    #progress-status { font-size: 12px; opacity: 0.8; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-title { font-weight: bold; font-size: 14px; white-space: nowrap; }
+    .btn { padding: 6px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    .btn-zoom { background: #6c757d; min-width: 30px; text-align: center; }
+    
+    #progress-status { 
+      font-size: 12px; 
+      opacity: 0.9; 
+      margin-left: auto; 
+      white-space: nowrap;
+      font-weight: 500;
+    }
 
     .main-layout { display: flex; flex-grow: 1; position: relative; overflow: hidden; }
 
@@ -41,13 +49,14 @@
 
     .search-input {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
       border: 1px solid #444;
       background: #222;
       color: white;
       font-size: 14px;
       outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
 
     .search-input:focus { border-color: #004b87; }
@@ -112,14 +121,22 @@
       image-rendering: crisp-edges;
     }
 
-    /* Caixa de Pesquisa Flutuante para Telemóveis */
+    /* Caixa de Pesquisa Flutuante no Telemóvel */
     .mobile-search-wrapper {
       display: none;
       position: absolute;
       top: 12px;
-      left: 12px;
-      right: 12px;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: 280px;
+      max-width: 85%;
       z-index: 50;
+    }
+
+    /* CRÍTICO: Font-size mínimo de 16px para evitar que o iOS/Android façam auto-zoom */
+    #search-box-mobile {
+      font-size: 16px !important;
     }
 
     .mobile-dropdown {
@@ -139,7 +156,7 @@
       .header-title { display: none; }
     }
 
-    /* Animação do Marcador Rosa */
+    /* Animação do Marcador */
     @keyframes pulsePinOnce {
       0% { r: 1.25px; stroke-width: 0.5px; }
       50% { r: 3px; stroke-width: 1px; }
@@ -175,7 +192,7 @@
     <button id="zoom-in" class="btn btn-zoom" title="Aumentar Zoom">+</button>
     <button id="zoom-out" class="btn btn-zoom" title="Diminuir Zoom">-</button>
     <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Enquadramento">Reset</button>
-    <span id="progress-status">A carregar dados...</span>
+    <span id="progress-status">A carregar...</span>
   </header>
 
   <div class="main-layout">
@@ -231,15 +248,15 @@
 
     async function init() {
       try {
-        progressStatus.innerText = 'A carregar ficheiros...';
+        progressStatus.innerText = 'A carregar...';
 
         const [svgRes, jsonRes] = await Promise.all([
           fetch('MAPA Infralobo.svg'),
           fetch('dados.json')
         ]);
 
-        if (!svgRes.ok) throw new Error('Não foi possível carregar MAPA Infralobo.svg');
-        if (!jsonRes.ok) throw new Error('Não foi possível carregar dados.json');
+        if (!svgRes.ok) throw new Error('Erro ao carregar SVG');
+        if (!jsonRes.ok) throw new Error('Erro ao carregar JSON');
 
         const svgText = await svgRes.text();
         listData = await jsonRes.json();
@@ -265,7 +282,8 @@
 
         fitMapToViewport();
 
-        progressStatus.innerText = `${listData.length} moradias carregadas.`;
+        const isMobile = window.innerWidth <= 768;
+        progressStatus.innerText = isMobile ? `${listData.length} moradias` : `${listData.length} moradias carregadas`;
       } catch (err) {
         console.error(err);
         progressStatus.innerText = `Erro: ${err.message}`;
@@ -307,7 +325,6 @@
 
     function centerMapOnPoint(x, y) {
       const viewportRect = viewport.getBoundingClientRect();
-      // Zoom aumentado para 25 para aproximação ainda mais próxima
       scale = 25;
 
       translateX = (viewportRect.width / 2) - (x * scale);
@@ -384,6 +401,11 @@
       }, { passive: true });
 
       window.addEventListener('touchend', stopDrag);
+
+      window.addEventListener('resize', () => {
+        const isMobile = window.innerWidth <= 768;
+        progressStatus.innerText = isMobile ? `${listData.length} moradias` : `${listData.length} moradias carregadas`;
+      });
     }
 
     function setupSearchListeners() {
@@ -412,6 +434,9 @@
       searchBoxDesktop.value = nome;
       searchBoxMobile.value = nome;
       listMobile.style.display = 'none';
+
+      // Retira o foco do input para fechar o teclado no telemóvel
+      searchBoxMobile.blur();
 
       renderListDesktop();
       renderPins();
