@@ -209,7 +209,7 @@
     <span class="header-title">Localizador de Moradias</span>
     <button id="zoom-in" class="btn btn-zoom" title="Aumentar Zoom">+</button>
     <button id="zoom-out" class="btn btn-zoom" title="Diminuir Zoom">-</button>
-    <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Enquadramento">Reset</button>
+    <button id="zoom-reset" class="btn btn-zoom" style="width: auto;" title="Repor Enquadramento e Limpar Pesquisa">Reset</button>
     <span id="progress-status">A carregar...</span>
   </header>
 
@@ -361,7 +361,12 @@
     function setupPanAndZoom() {
       zoomInBtn.addEventListener('click', () => zoomAtPoint(1.4));
       zoomOutBtn.addEventListener('click', () => zoomAtPoint(1 / 1.4));
-      zoomResetBtn.addEventListener('click', () => fitMapToViewport());
+      
+      // O botão Reset agora também limpa a pesquisa
+      zoomResetBtn.addEventListener('click', () => {
+        deselectMoradia();
+        fitMapToViewport();
+      });
 
       viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -594,7 +599,7 @@
           bg.setAttribute('height', textBounds.height + 1);
 
           const closeX = textBounds.x + textBounds.width + 0.75;
-          const closeY = textBounds.y - 0.25;
+          closeY = textBounds.y - 0.25;
 
           closeBg.setAttribute('x', closeX);
           closeBg.setAttribute('y', closeY);
