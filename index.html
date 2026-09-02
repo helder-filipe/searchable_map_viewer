@@ -6,6 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Localizador de Moradias - Infralobo</title>
 
+  <!-- Ícone da Janela/Aba (Favicon) -->
+  <link rel="icon" type="image/png" href="infralobo.png">
+  
+  <!-- Ícone para Aplicação (iOS / Web App) -->
+  <link rel="apple-touch-icon" href="infralobo.png">
+
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #1e1e1e; color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -20,6 +26,16 @@
       z-index: 100;
       flex-shrink: 0;
       width: 100%;
+    }
+
+    /* Estilo para o logótipo no cabeçalho */
+    .header-logo {
+      height: 32px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #ffffff;
+      padding: 2px 4px;
     }
 
     .header-title { font-weight: bold; font-size: 14px; white-space: nowrap; }
@@ -163,6 +179,10 @@
         gap: 6px;
       }
 
+      .header-logo {
+        height: 28px;
+      }
+
       .btn-zoom {
         padding: 5px 8px;
         font-size: 12px;
@@ -206,6 +226,7 @@
 <body>
 
   <header>
+    <img src="infralobo.png" alt="Infralobo" class="header-logo">
     <span class="header-title">Localizador de Moradias</span>
     <button id="zoom-in" class="btn btn-zoom" title="Aumentar Zoom">+</button>
     <button id="zoom-out" class="btn btn-zoom" title="Diminuir Zoom">-</button>
@@ -599,7 +620,7 @@
           bg.setAttribute('height', textBounds.height + 1);
 
           const closeX = textBounds.x + textBounds.width + 0.75;
-          closeY = textBounds.y - 0.25;
+          const closeY = textBounds.y - 0.25;
 
           closeBg.setAttribute('x', closeX);
           closeBg.setAttribute('y', closeY);
